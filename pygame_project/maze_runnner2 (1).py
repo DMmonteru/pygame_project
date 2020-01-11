@@ -2,7 +2,7 @@ import pygame
 import os
 import random
 
-
+pygame.init()
 hero = (60, 70)
 all_sprites = pygame.sprite.Group()
 border_sprites = pygame.sprite.Group()
@@ -16,13 +16,16 @@ clock = pygame.time.Clock()
 pygame.time.set_timer(CHANGE, 10)
 NEW_PLATFORM = 16
 NEW_COIN = 16
-v = 25
+v = 20
 jump_v = 0
 g = 20
 playerx = 30
 playery = 100
-platform_frequency = 800
-coin_frequency = 600
+# при увеличении этих констант, частота уменьшается
+# и ноборот
+platform_frequency = 700
+coin_frequency = 2000
+coins = 0
 
 
 def load_image(name, colorkey=None):
@@ -41,6 +44,7 @@ speed = 50
 run = True
 pygame.time.set_timer(NEW_PLATFORM, 100)
 pygame.time.set_timer(NEW_COIN, 100)
+font = pygame.font.SysFont('comicsans', 30)
 
 
 class Hero(pygame.sprite.Sprite):
@@ -68,7 +72,6 @@ class Hero(pygame.sprite.Sprite):
         pygame.time.set_timer(CHANGE, 100)
 
         self.coins = None
-        self.collected_coins = 0
 
         self.enemies = pygame.sprite.Group()
 
@@ -76,6 +79,7 @@ class Hero(pygame.sprite.Sprite):
 
     def update(self):
         global playery
+        global coins
         self.image = self.animations[count % len(self.animations)]
         if playery >= H - hero[1] - 20:
             playery -= 4
@@ -88,7 +92,7 @@ class Hero(pygame.sprite.Sprite):
 
         coins_hit_list = pygame.sprite.spritecollide(self, self.coins, False)
         for coin in coins_hit_list:
-            self.collected_coins += 1
+            coins += 1
             coin.kill()
 
         if pygame.sprite.spritecollideany(self, self.enemies, False):
@@ -104,7 +108,7 @@ class Platform(pygame.sprite.Sprite):
         self.image = load_image('road.png')
         self.image = pygame.transform.scale(self.image, (random.randint(100, 300), 10))
         self.rect = self.image.get_rect()
-        self.rect.x = 900
+        self.rect.x = W
         self.rect.y = random.choice(platforms_heights)
         pygame.time.set_timer(NEW_PLATFORM, platform_frequency)
 
@@ -116,10 +120,9 @@ coins_height = [platforms_heights[0] - 32, platforms_heights[1] - 32,
 class Coin(pygame.sprite.Sprite):
     def __init__(self, group):
         super().__init__(group)
-        # Загружаем изображение в спрайт
         self.image = load_image('coin.png')
         self.rect = self.image.get_rect()
-        self.rect.x = 900
+        self.rect.x = W
         self.rect.y = random.choice(coins_height)
         pygame.time.set_timer(NEW_COIN, coin_frequency)
 
@@ -164,7 +167,9 @@ while run:
     if bgx < W:
         screen.blit(bg, (bgx, 0))
     x -= 1
+    text = font.render(f'Score: {str(coins)}', 1, (255, 255, 255))
     if player.alive:
+        screen.blit(text, (W - 100, 10))
         all_sprites.draw(screen)
         all_sprites.update()
         platforms.draw(screen)
