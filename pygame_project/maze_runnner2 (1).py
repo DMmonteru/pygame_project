@@ -4,8 +4,7 @@ import random
 
 pygame.init()
 hero = (60, 70)
-all_sprites = pygame.sprite.Group()
-border_sprites = pygame.sprite.Group()
+hero_sprites = pygame.sprite.Group()
 platforms = pygame.sprite.Group()
 CHANGE = 31
 W, H = 800, 400
@@ -16,6 +15,7 @@ clock = pygame.time.Clock()
 pygame.time.set_timer(CHANGE, 10)
 NEW_PLATFORM = 16
 NEW_COIN = 16
+NEW_KNIFE = 1
 v = 20
 jump_v = 0
 g = 20
@@ -25,6 +25,7 @@ playery = 100
 # и ноборот
 platform_frequency = 700
 coin_frequency = 2000
+knife_frequency = 50000
 coins = 0
 
 
@@ -50,21 +51,19 @@ font = pygame.font.SysFont('comicsans', 30)
 class Hero(pygame.sprite.Sprite):
     def __init__(self, group):
         super().__init__(group)
-        self.run1 = load_image('run1.png')
-        self.run2 = load_image('run2.png')
-        self.run3 = load_image('run3.png')
-        self.run4 = load_image('run4.png')
+        self.animations_with = [pygame.transform.scale(load_image('run1.png'), hero),
+                                pygame.transform.scale(load_image('run2.png'), hero),
+                                pygame.transform.scale(load_image('run3.png'), hero),
+                                pygame.transform.scale(load_image('run4.png'), hero)]
 
-        self.run1 = pygame.transform.scale(self.run1, hero)
-        self.run2 = pygame.transform.scale(self.run2, hero)
-        self.run3 = pygame.transform.scale(self.run3, hero)
-        self.run4 = pygame.transform.scale(self.run4, hero)
-
-        self.animations = [self.run1, self.run2, self.run3, self.run4]
+        self.animations_without = [pygame.transform.scale(load_image('run1_without.png'), hero),
+                                   pygame.transform.scale(load_image('run2_without.png'), hero),
+                                   pygame.transform.scale(load_image('run3_without.png'), hero),
+                                   pygame.transform.scale(load_image('run4_without.png'), hero)]
 
         pygame.time.set_timer(CHANGE, 1)
 
-        self.image = self.animations[0]
+        self.image = self.animations_without[0]
         self.rect = self.image.get_rect()
         self.rect.x = playerx
         self.rect.y = playery
@@ -75,12 +74,20 @@ class Hero(pygame.sprite.Sprite):
 
         self.enemies = pygame.sprite.Group()
 
+        self.with_knife = False
+        self.knife = None
+
         self.alive = True
 
     def update(self):
         global playery
         global coins
-        self.image = self.animations[count % len(self.animations)]
+
+        if self.with_knife:
+            self.image = self.animations_with[count % len(self.animations_with)]
+        else:
+            self.image = self.animations_without[count % len(self.animations_without)]
+
         if playery >= H - hero[1] - 20:
             playery -= 4
         elif playery <= 10:
@@ -95,9 +102,17 @@ class Hero(pygame.sprite.Sprite):
             coins += 1
             coin.kill()
 
+        knife_hit_list = pygame.sprite.spritecollide(self, self.knife, False)
+        for knife in knife_hit_list:
+            if not self.with_knife:
+                knife.kill()
+            self.with_knife = True
+
         if pygame.sprite.spritecollideany(self, self.enemies, False):
             self.alive = False
 
+
+player = Hero(hero_sprites)
 
 platforms_heights = [100, 210, 340]
 
@@ -112,6 +127,22 @@ class Platform(pygame.sprite.Sprite):
         self.rect.y = random.choice(platforms_heights)
         pygame.time.set_timer(NEW_PLATFORM, platform_frequency)
 
+
+class Knife(pygame.sprite.Sprite):
+    def __init__(self, group):
+        super().__init__(group)
+        self.image = load_image('knife.png')
+        self.image = pygame.transform.scale(self.image, (50, 60))
+        self.rect = self.image.get_rect()
+        self.rect.x = W
+        self.rect.y = platforms_heights[0] - 80
+        pygame.time.set_timer(NEW_KNIFE, knife_frequency)
+
+
+knife_list = pygame.sprite.Group()
+knife = Knife(knife_list)
+knife_list.add(knife)
+player.knife = knife_list
 
 coins_height = [platforms_heights[0] - 32, platforms_heights[1] - 32,
                 platforms_heights[2] - 32]
@@ -130,9 +161,8 @@ class Coin(pygame.sprite.Sprite):
 coins_list = pygame.sprite.Group()
 coin = Coin(coins_list)
 coins_list.add(coin)
-
-player = Hero(all_sprites)
 player.coins = coins_list
+
 Platform(platforms)
 
 while run:
@@ -146,7 +176,7 @@ while run:
                 if jump_v <= 0:
                     jump_v = 0
             else:
-                for i in all_sprites:
+                for i in hero_sprites:
                     if not pygame.sprite.spritecollideany(i, platforms):
                         playery += g
             count += 1
@@ -154,10 +184,14 @@ while run:
                 i.rect.x -= v
             for i in coins_list:
                 i.rect.x -= v
+            for i in knife_list:
+                i.rect.x -= v
         if event.type == NEW_PLATFORM:
             Platform(platforms)
         if event.type == NEW_COIN:
             Coin(coins_list)
+        if event.type == NEW_KNIFE:
+            Knife(knife_list)
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_SPACE:
                 jump_v = 50
@@ -170,11 +204,13 @@ while run:
     text = font.render(f'Score: {str(coins)}', 1, (255, 255, 255))
     if player.alive:
         screen.blit(text, (W - 100, 10))
-        all_sprites.draw(screen)
-        all_sprites.update()
+        hero_sprites.draw(screen)
+        hero_sprites.update()
         platforms.draw(screen)
         platforms.update()
         coins_list.draw(screen)
         coins_list.update()
+        knife_list.draw(screen)
+        knife_list.update()
     pygame.display.update()
     clock.tick(speed)
