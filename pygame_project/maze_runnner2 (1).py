@@ -4,7 +4,7 @@ import random
 
 pygame.init()
 pygame.display.set_caption('maze_runner')
-W, H = 800, 400
+W, H = 800, 405
 SCREEN = (W, H)
 screen = pygame.display.set_mode(SCREEN)
 
@@ -23,7 +23,6 @@ dragon_animation_count = 0
 # события
 NEW_PLATFORM = 16
 NEW_COIN = 16
-NEW_KNIFE = 1
 NEW_ENEMY = 1
 NEW_DRAGON = 1
 
@@ -37,7 +36,6 @@ playery = 100  # начальная координата Y
 enemy_frequency = 20000
 platform_frequency = 400
 coin_frequency = 2000
-knife_frequency = 15000
 dragon_frequency = 10000
 coins = 0  # счёт
 x = 0
@@ -79,10 +77,10 @@ pygame.time.set_timer(NEW_COIN, 100)
 class Hero(pygame.sprite.Sprite):
     def __init__(self, group):
         super().__init__(group)
-        self.animations_with = [pygame.transform.scale(load_image('run1.png'), hero),
-                                pygame.transform.scale(load_image('run2.png'), hero),
-                                pygame.transform.scale(load_image('run3.png'), hero),
-                                pygame.transform.scale(load_image('run4.png'), hero)]
+        self.animations_with = [pygame.transform.scale(load_image('run11111.png'), hero),
+                                pygame.transform.scale(load_image('run22222.png'), hero),
+                                pygame.transform.scale(load_image('run33333.png'), hero),
+                                pygame.transform.scale(load_image('run44444.png'), hero)]
 
         self.animations_without = [pygame.transform.scale(load_image('run1_without.png'), hero),
                                    pygame.transform.scale(load_image('run2_without.png'), hero),
@@ -111,7 +109,6 @@ class Hero(pygame.sprite.Sprite):
     def update(self):
         global playery
         global coins
-        global best_score
 
         if self.with_knife:
             self.image = self.animations_with[count % len(self.animations_with)]
@@ -139,18 +136,16 @@ class Hero(pygame.sprite.Sprite):
             self.with_knife = True
 
         if pygame.sprite.spritecollideany(self, self.enemies, False):
-            if not self.with_knife:
-                if updatefile() < coins:
-                    with open('best_score.txt', 'w') as bs:
-                        bs.write(str(coins))
-                self.alive = False
+            if updatefile() < coins:
+                with open('best_score.txt', 'w') as bs:
+                    bs.write(str(coins))
+            self.alive = False
 
         if pygame.sprite.spritecollideany(self, self.dragons, False):
-            if not self.with_knife:
-                if updatefile() < coins:
-                    with open('best_score.txt', 'w') as bs:
-                        bs.write(str(coins))
-                self.alive = False
+            if updatefile() < coins:
+                with open('best_score.txt', 'w') as bs:
+                    bs.write(str(coins))
+            self.alive = False
 
 
 player = Hero(hero_sprites)
@@ -162,7 +157,7 @@ class Platform(pygame.sprite.Sprite):
     def __init__(self, group):
         super().__init__(group)
         self.image = load_image('road.png')
-        self.image = pygame.transform.scale(self.image, (random.randint(100, 300), 10))
+        self.image = pygame.transform.scale(self.image, (random.randint(200, 300), 10))
         self.rect = self.image.get_rect()
         self.rect.x = W
         self.rect.y = random.choice(platforms_heights)
@@ -187,13 +182,11 @@ class Enemy(pygame.sprite.Sprite):
         pygame.time.set_timer(NEW_ENEMY, enemy_frequency)
 
     def update(self):
-        self.rect.x -= 6
+        self.rect.x -= random.choice(range(3, 5))
         self.image = self.animation_attack[enemy_animation_count % len(self.animation_attack)]
 
 
 enemies_list = pygame.sprite.Group()
-enemy = Enemy(enemies_list)
-enemies_list.add(enemy)
 player.enemies = enemies_list
 
 
@@ -212,18 +205,16 @@ class Dragon(pygame.sprite.Sprite):
 
         self.image = self.animation[0]
         self.rect = self.image.get_rect()
-        self.rect.x = W
-        self.rect.y = platforms_heights[1] - 120
+        self.rect.x = random.choice([W + 100, W - 100])
+        self.rect.y = random.choice([platforms_heights[1] - 120, 10])
         pygame.time.set_timer(NEW_DRAGON, dragon_frequency)
 
     def update(self):
-        self.rect.x -= 6
+        self.rect.x -= random.choice(range(4, 9))
         self.image = self.animation[dragon_animation_count % len(self.animation)]
 
 
 dragon_list = pygame.sprite.Group()
-dragon = Dragon(dragon_list)
-dragon_list.add(dragon)
 player.dragons = dragon_list
 
 
@@ -234,9 +225,8 @@ class Knife(pygame.sprite.Sprite):
         self.image = load_image('knife.png')
         self.image = pygame.transform.scale(self.image, (50, 60))
         self.rect = self.image.get_rect()
-        self.rect.x = W
-        self.rect.y = platforms_heights[1] - 80
-        pygame.time.set_timer(NEW_KNIFE, knife_frequency)
+        self.rect.x = playerx + 300
+        self.rect.y = H - 100
 
 
 knife_list = pygame.sprite.Group()
@@ -245,7 +235,7 @@ knife_list.add(knife)
 player.knife = knife_list
 
 coins_height = [platforms_heights[0] - 32, platforms_heights[1] - 32,
-                H - 52]
+                H - 82]
 
 
 # монеты
@@ -266,8 +256,37 @@ player.coins = coins_list
 
 Platform(platforms)
 
-run = True
 
+def start_screen():
+    intro_text = ["Правила:", "",
+                  "SPACE - прыжок",
+                  "Собирайте монеты!",
+                  "Избегайте встреч с самураями и драконами, чтобы не проиграть!"]
+
+    fon = load_image('fon.png')
+    screen.blit(fon, (0, 0))
+    font = pygame.font.Font(None, 30)
+    text_coord = 50
+    for line in intro_text:
+        string_rendered = font.render(line, 1, pygame.Color('black'))
+        intro_rect = string_rendered.get_rect()
+        text_coord += 10
+        intro_rect.top = text_coord
+        intro_rect.x = 10
+        text_coord += intro_rect.height
+        screen.blit(string_rendered, intro_rect)
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+            elif event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN:
+                return  # начинаем игру
+        pygame.display.flip()
+
+
+run = True
+start_screen()
 while run:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -302,13 +321,11 @@ while run:
             Enemy(enemies_list)
         if event.type == NEW_DRAGON:
             Dragon(dragon_list)
-        else:
-            if event.type == NEW_PLATFORM:
-                Platform(platforms)
-            if event.type == NEW_COIN:
-                Coin(coins_list)
-            if event.type == NEW_KNIFE:
-                Knife(knife_list)
+
+        if event.type == NEW_PLATFORM:
+            Platform(platforms)
+        if event.type == NEW_COIN:
+            Coin(coins_list)
 
         # прыжок по нажатию
         if event.type == pygame.KEYDOWN:
@@ -332,8 +349,8 @@ while run:
         platforms.update()
         coins_list.draw(screen)
         coins_list.update()
-        knife_list.draw(screen)
         knife_list.update()
+        knife_list.draw(screen)
         enemies_list.update()
         enemies_list.draw(screen)
         dragon_list.update()
